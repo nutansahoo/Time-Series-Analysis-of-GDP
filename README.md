@@ -10,3 +10,6 @@ When two variables are cointegrated, there should be granger causality in at lea
 
 
 In the end, an VECM (Vector Error Correction Model) was fitted. The fit looks good with a MAPE of 0.64 except that the model is slightly over-predicting. 
+
+
+####GDP_DATA and gdp_analysis contains the data and code for analysis.
