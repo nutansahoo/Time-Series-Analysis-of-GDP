@@ -1,0 +1,434 @@
+---
+title: "To Assess the Relationship between the Economic Growths of India and Neighbouring Countries"
+author: "Nutan Sahoo"
+date: "25 December 2017"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+##Executive Summary 
+
+The statistics indicate disparity in GDP, with China having the highest GDP. The standard deviation of Chinese GPD is the highest, indicating substantial fluctuation over the time period under study.First step of our analysis consisted of determining the order of integration of the three variables by means of the ADF test. The test was first performed with only a drift term and then with constant and trend for the series in levels and first difference. *We concluded that log of GDP's of India, China and Pakistan are integrated of order one.* 
+
+
+We then performed Engle-Granger two step test for cointegration. After fitting the cointegrating regression models, the residuals were tested for stationarity by means of ADF test. The results imply that there is an equilibrating mechanism that keeps the countries' GDP from drifting too far apart from each other. 
+
+
+When two variables are cointegrated, there should be granger causality in at least one direction.The results of Toda-Yamamoto Granger causality test show strong evidence of causality running from India to Pakistan. But Pakistan's GDP does not granger-cause India's GDP. We also found that *China and India together granger-cause Pakistan's GDP. One possible reason for this could be the enormous volumes of exports from China and India to Pakistan. Exports from Pakistan to these countries are very small as compared to the imports from these countries.* Based on the results of the causality analysis, we can conclude that India and China affect Pakistan's economic growth more than Pakistan's economic growth affect those countries'.
+
+
+In the end, an VECM (Vector Error Correction Model) was fitted. The fit looks good with a MAPE of 0.64 except that the model is slightly over-predicting. 
+
+Import requuired libraries
+```{r, message=FALSE, warning=FALSE}
+library(tseries)
+library(vars)
+library(urca)
+library(forecast)
+library(zoo)
+library(ggplot2)
+```
+
+
+Reading in data and giving it the correct format.
+```{r}
+gdp<- read.csv("GDP.csv", header = T)
+dim(gdp)
+gdp<- ts(gdp, start = 1960, frequency = 1)
+class(gdp)
+head(gdp)
+```
+
+####Summary Statistics (in millions of dollars)
+```{r}
+summary(gdp/1000000)
+
+
+```
+
+####Plots
+
+```{r}
+
+library(ggplot2); library(ggfortify)
+autoplot(gdp)
+autoplot(gdp, facets=F)
+```
+
+We can see a clear increasing trend in GDP of all countries and hence the series cannot be stationary. We will difference the series apply ADF test to check if the series is stationary or not.
+
+We will try transforming by taking natural logarithm.
+```{r}
+#India vs. Pakistan
+plot(gdp1[, 2],gdp1[,1],pch=20 )     #this is linear
+plot(log(gdp1[, 2]),log(gdp1[,1]),pch=20 )
+
+#India vs. China
+plot(gdp1[, 3],gdp1[,1],pch=20 )
+
+#various transformations
+plot((log(gdp1[, 3])),(log(gdp1[,1])),pch=20 )
+plot((gdp1[, 3])^(1/2),(gdp1[,1]),pch=20 )   #this is  linear
+
+
+```
+
+After making required transformations, scatter plots between the dependent and independent variable seems linear. Scatter plot of India VS. Pakistan was linear therefore, no transformation was required. Scatter plot of India's and China's GDP had a slight curve. So, various transformations like log, square root, cube root were tried. Transformation in which China's GDP was transformed using square root was found to be linear. 
+
+
+**2nd attempt** -- Taking log transformations of all the variables as we were getting series which were integrated of different orders. After log transformations all are I(1).
+
+Now, we will check the stationarity of India's GDP, Pakistan's GDP and square root of China's GDP. 
+
+####Checking stationarity
+```{r}
+#S_China<- sqrt(gdp1[ ,3])
+#S_China<- ts(S_China, start = 1960)
+
+autoplot(log(gdp[,3]), ts.colour = "blue", main= "Time Series Plot of log of China's GDP",lty=2)
+autoplot(log(gdp[ ,c(1,2,3)]), facets = F)
+#code for making b/w plot
+autoplot(log(gdp[ ,c(1,2,3)]), facets = F, cex = 2)+xlab("Year")+ylab("Log of GDP")+theme(legend.text = element_text(size=10, face="bold"), axis.text.x = element_text(face = "bold", size = 10), axis.text.y = element_text(face = "bold", size = 10),axis.title.y = element_text(face = "bold", size = 11), axis.title.x= element_text(face = "bold", size = 12))+aes(linetype = series)+ scale_linetype_manual(values = c(1,2,3))+scale_color_manual(values = c("black", "black","black"))+scale_size_manual(values = c(10,10,10))+geom_line(size=0.72)
+
+summary(ur.df((lgdp[,1]), type="drift", selectlags = "AIC"))
+summary(ur.df(lgdp[,1], type="trend", selectlags = "AIC"))
+(ur.df(diff(lgdp[,1]), type = "trend", selectlags = "AIC"))
+(ur.df(diff(lgdp[,1]), type="drift", selectlags = "AIC"))
+
+(ur.df((lgdp[,2]), type="drift", selectlags = "AIC"))
+(ur.df((lgdp[,2]), type="trend", selectlags = "AIC"))
+(ur.df(diff(lgdp[,2]), type = "drift", selectlags = "AIC"))
+(ur.df(diff(lgdp[,2]), type = "trend", selectlags = "AIC"))
+
+(ur.df((lgdp[,3]), type="drift", selectlags = "AIC"))
+(ur.df((lgdp[,3]), type="trend", selectlags = "AIC"))
+(ur.df(diff(lgdp[,3]), type = "drift", selectlags = "AIC"))
+(ur.df(diff(lgdp[,3]), type = "trend", selectlags = "AIC"))
+
+
+
+```
+
+####How to interpret the results from the 
+Clearly, these series are non-stationary. 
+
+```{r}
+
+
+summary(ur.df(diff(tgdp[,1], differences = 1), type="none"))
+summary(ur.df(diff(tgdp[,2], type = "none")))
+summary(ur.df(diff(tgdp[,3], differences = 1), type="none"))
+
+```
+The p-value is less than 0.05. We can reject the null hypothesis that the series is non-stationary or that this series contains a unit root. First differences of log og GDP of India, China and Pakistan are stationary, hence they are Integrated of order 1. 
+
+####Plots of stationary series after differencing.
+
+```{r}
+par(mfrow=c(3,1), oma=c(0,5,0,5))
+plot(diff(log(gdp[,1]), differences = 1), main="Time series plot of Dlog(GDP_India)", type="l")
+plot(diff(log(gdp[,2]), differences = 1), main="Time series plot of Dlog(GDP_Pakistan)", type="l")
+plot(diff(log(gdp[,3]), differences = 2), main="Time series plot of Dlog(GDP_China)", type="l")
+
+```
+
+####Testing Cointegration
+
+We will use the Engle Granger 2 step Methodology to test for cointegration as described in *Analysis of Integrated and Co-Integrated Time Series with R*. The long-run relationship for each of the series are simply estimated by Ordinary Least Squares (OLS). The residuals from these three long-run relationships are stored as objects. An Augmented Dickey- Fuller (ADF) Test is applied to the residuals of each equation for testing whether the variables are cointegrated or not. We will use the critical values found in MacKinnon (1991) or Engle and Yoo (1987).
+
+```{r}
+lgdp<- log(gdp)
+BoxCox.lambda(gdp)
+tgdp<- BoxCox(gdp, lambda= 0.04184914 )
+
+
+ilm<- summary(lm(India~ Pakistan + China, data= lgdp))
+clm<- summary(lm(China~ Pakistan + India, data= lgdp))
+plm<- summary(lm(Pakistan~ India + China, data= lgdp))
+
+error.i<- ts(resid(ilm), start = 1960, frequency = 1)
+error.c<- ts(resid(clm), start = 1960, end= 2016, frequency = 1)
+error.p<- ts(resid(plm), start = 1960, end= 2016, frequency = 1)
+
+{plot(resid(ilm), type="l") 
+abline(h=0)}
+{plot(resid(clm), type="l")
+abline(h=0)}  
+{plot(resid(plm), type="l")
+abline(h=0)}
+
+summary(ur.df(error.i, selectlags = "AIC", type = "drift"))
+summary(ur.df(error.p, selectlags = "AIC", type = "drift"))
+summary(ur.df(error.c, selectlags = "AIC", type = "drift"))
+
+punitroot(c(-3.4561, -3.5721,-2.0123), N=57, trend = "nc", statistic = "t")
+#0.0008411547 0.0005822858 0.0431940180
+punitroot(c(-3.4234,-3.5411, -1.9952), N=57, trend = "c", statistic = "t")
+
+```
+
+Critical values from MacKinnon 1991
+
+```{r}
+
+#beta+ beta1/T + beta2/T^2
+
+#no constant
+-1.9393- (0.398/56) - (10.04/56^2)  #-1.949609
+#no trend
+-3.7429  -8.352/56-13.41/56^2  #-3.896319
+#with trend
+-4.1193 - (12.024/56)-(13.13/56)   #-4.568479
+
+#beta+ beta1/T + beta2/T^2 + beta3/T^3
+#constant term included
+-3.74066-(8.5631/56)-(10.852/56^2)+(27.982/56^3) #-3.896874
+#trend term included
+-4.11890-(11.8922/56)-(19.031/56^2)+(77.332/56^3) #-4.336889
+
+
+test.i@teststat #-3.456054
+test.p@teststat
+test.c@teststat
+```
+Test statistic is greater than the critical value of -1.949609, calculated from *Critical Values for Cointegrating Tests* by James G MacKinnon (1991). Hence, we reject the null hypothesis of a unit root and conclude that the residuals are stationary. 
+
+####Model Building
+we will firstly split the data into training and testing dataset.Methodology employed is as described in *Forecasting: Principles and Practice by Rob J Hyndman & George*
+
+```{r}
+train<- window(lgdp, end = 2013)
+test<- window(lgdp, start = 2014)
+
+fit<- auto.arima(train[,1], xreg = train[,c(2,3)], approximation = F, stepwise = F)
+Box.test(residuals(fit), type="Ljung" )
+ggAcf(residuals(fit)); tsdisplay(arima.errors(fit), main="Arima Errors")
+tsdisplay(residuals(fit))
+fcast<- forecast(fit, xreg= test[,c(2,3)], h=3)
+fcast; 
+autoplot(fcast, col="black", lty = 3)+autolayer(test[,1], series = "test data", type="p")
+autoplot(fcast)
+
+
+```
+ljung box test shows that the residuals are uncorrelated
+
+####Comaparing actual to fitted values
+
+```{r}
+{plot(train[,1], ylab = expression('Log of GDP'[India]), xlab="Year")
+lines(smooth.spline(fitted(fit)), col="red")
+#adding a legend
+legend(1960,28, legend = c("Actual value of LGDP", "Fitted Value of LGDP"), col=c("black", "red"), lty=1, cex= 0.8, text.font = 4, bg="grey" )}
+
+#comparing forecasts
+{plot(lgdp[,1],  lty= 1, type="l", lwd=1, ylim=c(24,29), xlab="Year", ylab=expression('Log of GDP'[India]))
+lines(2014:2016, fcast$mean, pch= 20, col="blue", type="b", lty=3)
+lines(2014:2016, fcast$lower[,1], type = "l", lty= 3)
+lines(2014:2016, fcast$lower[,2], type = "l", lty= 5)
+lines(2014:2016, fcast$upper[,1], type = "l", lty= 3)
+lines(2014:2016, fcast$upper[,2], type = "l", lty= 5)
+legend("topleft", legend = c("Actual","point forecasts","80% conf. int.","90% conf. int."), lty=c(1,3,3,5), cex= 0.8, text.font = 4, pch= c(NA, 20,NA, NA ), bg="grey", col=c("black", "blue","black","black"))}
+legend(1960,28, legend = "point forecasts", pch=20, text.font = 3, col="blue")
+
+```
+####Accuracy and Model Diagnostics
+```{r}
+accuracy(fcast, lgdp[,1])
+accuracy(fcast, lgdp[,1])["Test Set","MAPE"]
+checkresiduals(residuals(fit))
+
+```
+####Error Correction Model
+The necessary first differences of the series and its lagged values are
+created, as well as the series for the error term lagged by one period.
+
+```{r}
+train1<- ts(embed(diff(train), dimension = 2), start = 1962)
+colnames(train1)<- c("DInd","DPak","DChn","D1Ind","D1Pak","D1Chn") 
+error_ecm<- window(lag(error.i, k=-1), start = 1962)
+  
+ecm <??? lm( DInd ~ error_ecm[-53] + D1Ind + D1Pak + D1Chn , data = train1 )
+```
+
+####Modeling GDP with deterministic and stochastic trends.
+
+```{r}
+#Pakistan
+train_p<- window(gdp[,2], end=2014)
+test_p<- window(gdp[,2], start= 2015)
+#deterministic trend
+trend<- seq_along(train_p)
+model1<- auto.arima(train_p, d=0, xreg=1960:2014)
+summary(model1)
+
+#stochastic trend
+model2<- auto.arima(train_p, d=1)
+summary(model2)
+autoplot(train_p)+autolayer(fitted(model1))
+autoplot(train_c)+autolayer(fitted(model3))
+
+train_c<- window(gdp[,3], end=2014)
+test_c<- window(gdp[,3], start= 2015)
+model3<- auto.arima(train_c, d=1)
+summary(model3)
+
+model4<- auto.arima(train_p, stepwise = F, approximation = F)
+autoplot(train_p)+autolayer(fitted(model4))
+f_p<- forecast(model4, h=3)
+accuracy(f_p, test_p)
+f_p; test_p
+
+model5<- auto.arima(train_c, stepwise = F, approximation = F)
+autoplot(train_c)+autolayer(fitted(model5))
+f_c<- forecast(model5, h=3)
+accuracy(f_c, test_c)
+f_c; test_c
+
+f_c$mean[3]; f_p$mean[3]
+xreg1<- data.frame(Pakistan=log(f_p$mean[3]), China=log(f_c$mean[3]))
+
+forecast(fit, xreg = xreg1  );test
+
+tail(gdp[,1]); exp(28.47464)
+```
+
+
+####Causality tests
+Null hypothesis would be that Dln(Chn) and Dln(Pak) does not granger cause Dln(Ind)
+
+```{r}
+#library(vars)
+#series must be stationary, make stationary by taking first difference
+DlnChn<- diff(lgdp[,3])
+DlnPak<- diff(lgdp[,2])
+DlnInd<- diff(lgdp[,1])
+
+DlnGDP<- cbind(DlnInd, DlnPak, DlnChn)
+D2<- cbind(DlnInd, DlnPak)
+D3<- cbind(DlnInd, DlnChn)
+
+View(DlnGDP)
+
+#Granger causality test is very sensitive to lag length therefore we choose
+#optimal lag length by AIC 
+VARselect(DlnGDP, lag.max= 5, type="const")
+vargdp<- VAR(DlnGDP, type="const", p=1)
+vard2<- VAR(D2, type="const", ic="AIC")
+vard3<- VAR(D3, type="const", ic="AIC")
+vard2$p
+vard3
+
+#causality test
+#granger and instantaneous
+#DlnChn and DlnPak does not cause DlnInd
+causality(vargdp, cause = c("DlnInd"))
+causality(vard2, cause="DlnInd")
+causality(vargdp, cause = "DlnPak")
+
+```
+
+We also employ the granger causality test proposed by Toda and Yamamoto (1995) as an alternative approach to test for long-run causality. This method has two advantages over usual granger causality test. Firstly, it doesn't require pre-testing for cointegration of the system. Secondly, these tests can be implemented regardless of whether the variables are mixed integrated of an order greater than two. Testing for granger causality using F-statistics when one or both time series are non-stationary can lead to spurious causality (He and Maekawa, 1999).
+
+
+####Toda Yamamoto causality test
+```{r}
+VARselect(lgdp, lag.max = 10, type= "both")
+v.2<- VAR(lgdp, p=2, type="both")
+v.1<- VAR(lgdp, p=1, type="both")
+roots(v.1)
+plot(stability(v.2))
+plot(stability(v.1))
+v.3<- VAR(lgdp, p=3, type="both")
+v.3$varresult
+summary(v.3)
+v.3$varresult[1]
+v.3$varresult[[1]]
+
+#ho pakistan !-> india
+(wald.test(b=coef(v.3$varresult[[1]]), Sigma = vcov(v.3$varresult[[1]]), Terms = c(2,5)))
+#ho= india !-> pakistan
+wald.test(b=coef(v.3$varresult[[2]]), Sigma = vcov(v.3$varresult[[2]]), Terms = c(1,4))
+
+#ho= india !-> china
+wald.test(b=coef(v.3$varresult[[3]]), Sigma = vcov(v.3$varresult[[3]]), Terms= c(1,4))
+
+#ho= china !-> india
+wald.test(b=coef(v.3$varresult[[1]]), Sigma = vcov(v.3$varresult[[1]]), Terms = c(3,6))
+
+#ho= pakistan !-> china
+wald.test(b=coef(v.3$varresult[[3]]), Sigma = vcov(v.3$varresult[[3]]), Terms = c(2, 5))
+
+#ho= china !-> pakistan
+wald.test(b= coef(v.3$varresult[[2]]), Sigma = vcov(v.3$varresult[[2]]), Terms = c(3,6))
+
+#h0=pakistan and china do not granger cause India
+wald.test(b=coef(v.3$varresult[[1]]), Sigma = vcov(v.3$varresult[[1]]), Terms = c(2,3,5,6))
+
+#h0 = India and china do not granger cause Pakistan
+wald.test(b=coef(v.3$varresult[[2]]), Sigma = vcov(v.3$varresult[[2]]), Terms=c(1,3,4,6))
+
+#h0 = India and Pakistan do not granger cause China 
+wald.test(b=coef(v.3$varresult[[3]]), Sigma = vcov(v.3$varresult[[3]]), Terms = c(1,2,4,5))
+
+#to get fitted values use this- v.22$varresult[[1]]$fitted.values
+```
+
+```{r}
+v.f<- VAR(lgdp[-57, ], p=2, type="both")
+
+{plot(1962:2015,v.f$varresult[[1]]$fitted.values , type = "l")
+lines(1962:2015, lgdp[-c(1,2,57),1], lty=3)}
+fcast<- forecast(fit, xreg= test[,c(2,3)], h=3)
+
+Ind_2016<-  0.96366*28.36812 -0.01512*26.32375+-0.05270*30.03478 -0.18439*28.34171 + 0.09613*26.22191 +0.12409*29.98072 +1.88832 +0.00354*57
+Ind_2016
+
+```
+```{r}
+plot(irf(v.2, impulse = "Pakistan", response = c("India", "China"), ortho = T, boot = F))
+plot(irf(v.2, impulse = c("Pakistan", "India"), response = c("China"), ortho = F, cummulative=T, boot = F, n.ahead = 50 ))
+
+```
+####Vecm
+```{r}
+#coef(summary(cajorls(vecm, r=1)$rlm))
+library(tsDyn)
+#coefficients
+y.mat<- data.frame(lgdp[,1], lgdp[,2], lgdp[,3])
+colnames(y.mat)<- c("Ind", "Pak","Chn")
+vecm1<- VECM(y.mat[-c(56, 57), ], lag = 1, r=1, include = "const", estim = "ML")
+res<- summary(vecm1)$residuals
+ggAcf(res[,1]^2)
+#fitted values
+vecm1.fit<-fitted(vecm1, level = "original")
+dim(vecm1.fit)
+
+jpeg(filename = "FittedvsActual.jpg", width = 550, height = 440)
+{plot(1961:2013, y.mat[-c(1,57,56,55),1], lty = 1, type= "l" ,xlab="Year", ylab="Log of GDP of India")
+lines(1961:2013, vecm1.fit[,1], lty = 2)
+legend(1960,28, legend = c("Actual", "Fitted"), lty=c(1,2), cex= 0.8, text.font = 4, bg="grey" )}
+dev.off()
+
+newdat<- as.data.frame(tail(y.mat,2))
+predict(vecm1, newdata = newdat ,n.ahead = 2)
+
+plot(train[,1], ylab = expression('Log of GDP'[India]), xlab="Year")
+lines(smooth.spline(fitted(fit)), col="red")
+
+#test set accuracy
+f1=predict(vecm1, newdata = newdat ,n.ahead = 2)[,1]
+x1<- (tail(y.mat,2)[,1])
+accuracy(f=f1, x=x1)
+#training set accuracy
+accuracy(f=(vecm1.fit[,1]),x=(y.mat[-c(1,57,56,55),1]))
+
+#saving a plot
+jpeg("Plotoflogofgdp1.jpg", width = 570, height = 410, res = 100)
+autoplot(log(gdp[ ,c(1,2,3)]), facets = F, cex = 2)+xlab("Year")+ylab("Log of GDP")+theme(legend.text = element_text(size=10, face="bold"), axis.text.x = element_text(face = "bold", size = 10), axis.text.y = element_text(face = "bold", size = 10),axis.title.y = element_text(face = "bold", size = 11), axis.title.x= element_text(face = "bold", size = 12))+aes(linetype = series)+ scale_linetype_manual(values = c(1,2,3))+scale_color_manual(values = c("black", "black","black"))+scale_size_manual(values = c(10,10,10))+geom_line(size=0.72)
+dev.off()
+```
+
